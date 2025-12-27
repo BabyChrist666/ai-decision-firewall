@@ -1,234 +1,182 @@
 # AI Decision Firewall (ADF)
 
-**Enterprise-Grade Runtime Governance for Artificial Intelligence**
+**Runtime Governance and Policy Enforcement for AI Systems**
 
-ADF is a production-ready governance layer that sits between AI systems and real-world actions. ADF does NOT generate AI outputs—it **governs** whether AI outputs may proceed based on safety, evidence, and compliance requirements.
-
----
-
-## 🎯 What ADF IS
-
-ADF is a **runtime governance and enforcement system** that:
-
-- ✅ **Evaluates** AI-generated outputs before they execute
-- ✅ **Enforces** mandatory governance rules (e.g., trades require human review)
-- ✅ **Validates** evidence requirements for high-confidence claims
-- ✅ **Escalates** high-risk decisions to humans
-- ✅ **Provides** explainable, auditable governance decisions
-- ✅ **Learns** from past decisions to improve over time
-
-## ❌ What ADF IS NOT
-
-ADF is NOT:
-- ❌ An AI model (it does not generate text, answers, or decisions)
-- ❌ A replacement for human judgment
-- ❌ A prompt engineering tool
-- ❌ A risk scoring system without enforcement
-- ❌ A post-hoc analysis tool
-
-**ADF governs outputs—it does not generate them.**
+AI Decision Firewall is an enterprise-grade runtime enforcement layer that sits between AI systems and real-world actions. ADF intercepts AI-generated outputs before execution and evaluates them against governance rules, evidence requirements, risk thresholds, and compliance policies. It provides deterministic verdicts that determine whether AI outputs may proceed, require additional evidence, escalate to human review, or must be blocked.
 
 ---
 
-## 🔒 Why ADF Exists
+## Problem Statement
 
-### The Problem: Unchecked AI Outputs
+AI systems in production face critical challenges that traditional monitoring and post-hoc analysis cannot address:
 
-AI systems today suffer from critical failures:
+**Hallucinations and Ungrounded Claims**
+AI models often express high confidence in factual claims without providing supporting evidence. These outputs propagate misinformation and erode trust when deployed in production systems.
 
-1. **Hallucinations**: High-confidence factual claims without evidence
-   - Example: "Apple was founded in 1976" (claimed with 95% confidence, no sources)
+**Overconfident Predictions**
+AI systems may assign high confidence scores to speculative or uncertain outputs, creating false certainty that leads to poor decision-making.
 
-2. **Overconfidence**: Confidence scores that don't match reality
-   - Example: 90% confidence on speculative claims presented as facts
+**High-Risk Autonomous Actions**
+AI systems executing financial trades, medical recommendations, legal advice, or code execution without human oversight present unacceptable risks to organizations and end users.
 
-3. **Risk Blindness**: High-impact actions executed without safeguards
-   - Example: Automatic trading decisions, medical recommendations, legal advice
+**Lack of Auditability**
+Most AI systems operate as black boxes, providing no explanation for decisions and no immutable audit trail for compliance and regulatory requirements.
 
-4. **Lack of Governance**: No enforcement layer between AI and real-world actions
-   - Example: AI systems making financial trades without human oversight
-
-### The Solution: Governance That Enforces
-
-ADF provides **mandatory governance rules** that:
-
-- **Never auto-approve** certain actions (trades, medical, legal) regardless of AI confidence
-- **Require evidence** for high-confidence factual claims
-- **Escalate** medium+ risk decisions to humans
-- **Block** unsafe patterns and contradictions
-- **Provide** explainable reasons for every decision
+ADF addresses these problems by enforcing governance rules at runtime, before AI outputs execute real-world actions.
 
 ---
 
-## 🏢 How Customers Use ADF
+## What ADF Does
 
-### Typical Integration Pattern
+ADF intercepts AI outputs and evaluates them across multiple dimensions:
+
+1. **Evidence Validation**: Requires supporting sources for high-confidence factual claims
+2. **Confidence Alignment**: Validates that confidence scores match the characteristics of claims
+3. **Risk Assessment**: Calculates risk scores based on confidence, action impact, and evidence presence
+4. **Policy Enforcement**: Applies governance rules that cannot be bypassed (e.g., all trades require human review)
+5. **Safety Rules**: Blocks unsafe patterns, contradictions, and harmful actions
+
+ADF returns deterministic verdicts:
+
+- **ALLOW**: Output may proceed; all checks passed and risk is acceptable
+- **REQUIRE_EVIDENCE**: Evidence must be provided before proceeding
+- **REQUIRE_HUMAN_REVIEW**: Human approval required before proceeding (mandatory for certain actions)
+- **BLOCK**: Output violates safety rules and cannot proceed
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────┐
+│   AI System     │
+│  (LLM/Model)    │
+└────────┬────────┘
+         │
+         │ AI Output + Metadata
+         │ (confidence, action, sources)
+         │
+         ▼
+┌─────────────────────────────────────┐
+│      AI Decision Firewall (ADF)     │
+│                                      │
+│  ┌──────────────────────────────┐  │
+│  │  Policy Manager              │  │
+│  │  (Governance Rules)          │  │
+│  └────────────┬─────────────────┘  │
+│               │                     │
+│  ┌────────────▼─────────────────┐  │
+│  │  Firewall Interceptor        │  │
+│  │  - Claim Parser              │  │
+│  │  - Evidence Checker          │  │
+│  │  - Confidence Validator      │  │
+│  │  - Risk Scorer               │  │
+│  │  - Rules Engine              │  │
+│  │  - Verdict Engine            │  │
+│  └────────────┬─────────────────┘  │
+│               │                     │
+│  ┌────────────▼─────────────────┐  │
+│  │  Audit & Metrics             │  │
+│  │  - Immutable Logs            │  │
+│  │  - Decision Tracking         │  │
+│  └──────────────────────────────┘  │
+└────────────┬────────────────────────┘
+             │
+             │ Verdict + Explanation
+             │
+         ┌───┴────┐
+         │        │
+    ┌────▼───┐ ┌─▼────────┐
+    │ ALLOW  │ │ ESCALATE │
+    │        │ │ / BLOCK  │
+    └────────┘ └──────────┘
+         │            │
+         ▼            ▼
+    ┌────────────────────┐
+    │  Real-World Action │
+    │  (if allowed)      │
+    └────────────────────┘
+```
+
+---
+
+## Governance and Policy Modes
+
+ADF enforces governance rules that cannot be bypassed by confidence scores, evidence presence, or risk calculations. These rules define mandatory human review requirements for specific action types.
+
+**GENERAL_AI Mode**
+Default policy mode with conservative defaults. Requires human review for financial trades and code execution actions.
+
+**FINANCIAL_SERVICES Mode**
+All financial trades require mandatory human review. This requirement cannot be overridden regardless of confidence, evidence, or risk score. Stricter evidence thresholds and lower risk tolerance.
+
+**HEALTHCARE Mode**
+Medical actions require mandatory human review. Highest evidence requirements and strictest risk enforcement for healthcare applications.
+
+**LEGAL Mode**
+Legal actions require mandatory human review. Highest evidence requirements and strictest risk enforcement for legal applications.
+
+Policy modes are set via API and apply to all firewall evaluations:
 
 ```python
-from adf.sdk import firewalled
-
-@firewalled(intended_action="trade")
-def execute_trading_strategy():
-    # Your AI model generates output
-    ai_output = llm.generate("Should I buy AAPL?")
-    confidence = 0.85
-    sources = ["https://financial-analysis.com/report"]
-    
-    return ai_output, confidence, sources
-
-# ADF automatically evaluates before execution
-try:
-    result = execute_trading_strategy()
-    # Only executes if ADF allows
-except RuntimeError as e:
-    # ADF blocked the output
-    print(f"Governance decision: {e}")
-```
-
-### Governance Workflow
-
-1. **AI System** generates output (confidence, sources, intended action)
-2. **ADF Evaluates** against governance rules:
-   - Is evidence provided for high-confidence claims?
-   - Does the intended action require mandatory human review?
-   - What is the risk score?
-   - Are there unsafe patterns?
-3. **ADF Returns Verdict**:
-   - `ALLOW`: Output may proceed
-   - `REQUIRE_EVIDENCE`: Evidence must be provided
-   - `REQUIRE_HUMAN_REVIEW`: Human must approve (mandatory for certain actions)
-   - `BLOCK`: Output violates safety rules
-4. **Your System** acts on the verdict
-
----
-
-## 🛡️ What ADF Prevents
-
-### 1. Unsafe Actions Without Oversight
-
-**Problem**: AI systems executing high-impact actions automatically.
-
-**ADF Solution**: Governance rules that **ALWAYS** require human review for:
-- Financial trades
-- Medical recommendations
-- Legal advice
-- Code execution
-- User data deletion
-
-**Example**:
-```
-Input: Action="trade", Confidence=0.95, Evidence=provided, Risk=0.2
-ADF Verdict: REQUIRE_HUMAN_REVIEW
-Reason: "Governance rule: trade actions require mandatory human review"
-```
-
-### 2. Hallucinated Facts
-
-**Problem**: AI makes confident factual claims without evidence.
-
-**ADF Solution**: Evidence requirements for high-confidence factual claims.
-
-**Example**:
-```
-Input: "Apple was founded in 1976" (Confidence=0.92, Sources=[])
-ADF Verdict: BLOCK
-Reason: "High confidence factual claims without evidence"
-```
-
-### 3. Overconfidence on Ungrounded Claims
-
-**Problem**: AI expresses high confidence on speculative or uncertain claims.
-
-**ADF Solution**: Confidence-evidence alignment checks.
-
-**Example**:
-```
-Input: "The market might go up" (Confidence=0.9, Sources=[])
-ADF Verdict: REQUIRE_EVIDENCE
-Reason: "Confidence (0.9) exceeds threshold for ungrounded claim"
-```
-
-### 4. High-Risk Decisions Without Review
-
-**Problem**: Medium-high risk decisions auto-approved.
-
-**ADF Solution**: Risk-based escalation to human review.
-
-**Example**:
-```
-Input: Risk Score=0.65, Action="answer"
-ADF Verdict: REQUIRE_HUMAN_REVIEW
-Reason: "Risk score (0.65) exceeds medium threshold"
-```
-
----
-
-## 📊 Governance Policy Modes
-
-ADF supports industry-specific governance profiles:
-
-### GENERAL_AI (Default)
-- Trades require human review
-- Code execution requires human review
-- Conservative evidence thresholds
-
-### FINANCIAL_SERVICES
-- **ALL trades require mandatory human review** (cannot be overridden)
-- Stricter evidence requirements
-- Lower risk thresholds
-
-### HEALTHCARE
-- Medical actions require human review
-- Highest evidence thresholds
-- Strictest risk enforcement
-
-### LEGAL
-- Legal actions require human review
-- Highest evidence thresholds
-- Strictest risk enforcement
-
-### Setting Policy Mode
-
-```python
-# Via API
 POST /policy/mode
 {
   "mode": "FINANCIAL_SERVICES"
 }
-
-# Check current policy
-GET /policy/mode
 ```
 
 ---
 
-## 🔧 Installation & Setup
+## Quick Start
+
+### Prerequisites
+
+- Python 3.8 or higher
+- pip package manager
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd ai-decision-firewall
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 # Install dependencies
 pip install -r requirements.txt
+```
 
-# Start API server
+### Start the API Server
+
+```bash
+# Run with uvicorn
+uvicorn adf.main:app --reload --host 0.0.0.0 --port 8000
+
+# Or use Python module
 python -m adf.main
-# or
-uvicorn adf.main:app --reload
+```
 
-# Run demo scenarios
-python -m adf.demo.investor_demo
+### Verify Installation
 
-# Open dashboard (double-click)
-# adf_dashboard.html
+Access the API documentation at:
+- Interactive API docs: http://localhost:8000/docs
+- Alternative docs: http://localhost:8000/redoc
+
+Test the health endpoint:
+```bash
+curl http://localhost:8000/health
 ```
 
 ---
 
-## 📡 API Endpoints
+## Key API Endpoints
 
-### Core Endpoint
+### POST /firewall/check
 
-**POST** `/firewall/check`
-
-Evaluates AI output against governance rules.
+Main endpoint for evaluating AI outputs. Returns a verdict with explanation.
 
 **Request:**
 ```json
@@ -250,110 +198,84 @@ Evaluates AI output against governance rules.
   "applied_policies": ["mandatory_governance_review"],
   "escalation_reason": "Governance rule: trade actions require mandatory human review in FINANCIAL_SERVICES policy mode",
   "confidence_alignment": false,
-  "failed_checks": ["governance_mandatory_review"]
+  "failed_checks": ["governance_mandatory_review"],
+  "details": {
+    "claims": [...],
+    "risk_level": "high",
+    "checks": {...}
+  }
 }
 ```
 
-### Policy Management
+### POST /policy/mode
 
-**GET** `/policy/mode` - Get current policy configuration
+Set the governance policy mode for all firewall evaluations.
 
-**POST** `/policy/mode` - Set policy mode
+**Request:**
 ```json
 {
   "mode": "FINANCIAL_SERVICES"
 }
 ```
 
-### Audit & Compliance
-
-**GET** `/audit/logs` - Query audit logs
-
-**GET** `/metrics` - Get governance statistics
-
----
-
-## 🎨 Dashboard (Demo Mode)
-
-Open `adf_dashboard.html` in your browser to see:
-
-- **Governance Input**: Submit simulated AI outputs for evaluation
-- **Demo Scenarios**: Pre-configured examples (Hallucinated Fact, High-Risk Trade, Grounded Answer)
-- **Governance Verdict**: Color-coded decision with explanation
-- **Applied Policies**: Which governance rules were triggered
-- **System Log**: Real-time governance decisions
-
-**Note**: The dashboard is for demonstration and testing. Production use should integrate via API/SDK.
-
----
-
-## 🔐 Governance Rules (Non-Negotiable)
-
-ADF enforces these rules **regardless** of confidence, evidence, or risk scores:
-
-1. **Trade actions** → ALWAYS require human review
-2. **Medical actions** → ALWAYS require human review (Healthcare mode)
-3. **Legal actions** → ALWAYS require human review (Legal mode)
-4. **Code execution** → ALWAYS require human review
-5. **Unsafe patterns** → ALWAYS blocked
-6. **High-confidence factual claims without evidence** → Blocked or evidence required
-
-These rules **cannot be overridden** by:
-- High confidence scores
-- Presence of evidence
-- Low risk scores
-- Manual configuration
-
----
-
-## 📈 Enterprise Features
-
-### Audit Logging (Enterprise Mode)
-
-Enable with environment variable:
-```bash
-export ADF_ENTERPRISE_MODE=true
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Policy mode set to FINANCIAL_SERVICES",
+  "policy": {
+    "mode": "FINANCIAL_SERVICES",
+    "mandatory_review_actions": ["trade", "execute_code"],
+    "confidence_threshold_evidence_required": 0.7,
+    "risk_threshold_medium": 0.5,
+    "description": "Financial services compliance - all trades require human review"
+  }
+}
 ```
 
-Features:
-- Immutable JSONL audit logs
-- All decisions logged with hashes
-- Tamper-resistant storage
-- Compliance-ready audit trail
+### GET /policy/mode
 
-### Self-Learning
+Get the current policy mode configuration.
 
-ADF learns from past decisions:
-- Tracks false positives (humans override blocks)
-- Tracks false negatives (humans block allowed outputs)
-- Adapts thresholds based on performance
-- No code changes required—only parameter tuning
+### GET /audit/logs
 
----
+Query audit logs for compliance and analysis. Requires enterprise mode.
 
-## 🧪 Testing & Validation
+**Query Parameters:**
+- `limit`: Maximum number of records (1-1000, default: 100)
+- `verdict`: Filter by verdict type
+- `action`: Filter by intended action
 
-### Critical Test Case
+### GET /metrics
 
-**Scenario**: Trade action with high confidence, evidence provided, low risk score
+Get firewall statistics including request counts, block rates, and verdict distributions.
 
-```
-Input:
-  - Action: "trade"
-  - Confidence: 0.95
-  - Evidence: provided
-  - Risk Score: 0.2
+### POST /demo/run
 
-Expected Verdict: REQUIRE_HUMAN_REVIEW
-
-Reason: Governance rule enforcement (trade actions always require human review)
-```
-
-This test **must pass** to ensure governance rules are properly enforced.
+Execute predefined demo scenarios for testing and demonstration.
 
 ---
 
-## 🚀 SDK Usage
+## Dashboard (Demo and Visualization)
+
+The repository includes `adf_dashboard.html`, a self-contained HTML dashboard that visualizes ADF's governance decisions. This dashboard is intended for:
+
+- Demonstration and visualization of ADF capabilities
+- Testing and experimentation
+- Understanding verdict explanations and risk scores
+
+The dashboard is not required for production use. Production deployments should integrate ADF via the API or Python SDK.
+
+To use the dashboard:
+1. Start the ADF API server (see Quick Start)
+2. Open `adf_dashboard.html` in a web browser
+3. Submit simulated AI outputs to see governance verdicts
+
+---
+
+## Python SDK Usage
+
+### Basic Usage
 
 ```python
 from adf.sdk import FirewallClient
@@ -361,52 +283,120 @@ from adf.sdk import FirewallClient
 client = FirewallClient()
 
 response = client.check(
-    ai_output="Buy 1000 shares of AAPL",
+    ai_output="Execute trade: BUY 1000 shares of AAPL",
     confidence=0.9,
     intended_action="trade",
     sources=["https://analysis.com/report"]
 )
 
 if response.verdict == "ALLOW":
-    print("Output approved!")
+    # Proceed with action
+    execute_trade(response.ai_output)
 elif response.verdict == "REQUIRE_HUMAN_REVIEW":
-    print(f"Human review required: {response.explanation}")
+    # Escalate to human
+    escalate_for_review(response)
 else:
-    print(f"Blocked: {response.explanation}")
+    # Block or require evidence
+    handle_blocked_output(response)
+```
+
+### Decorator Pattern
+
+```python
+from adf.sdk import firewalled
+
+@firewalled(intended_action="trade", raise_on_block=True)
+def execute_trading_strategy():
+    # Your AI model generates output
+    ai_output = llm.generate("Should I buy AAPL?")
+    confidence = 0.85
+    sources = ["https://financial-analysis.com/report"]
+    
+    return ai_output, confidence, sources
+
+try:
+    result = execute_trading_strategy()
+    # Only executes if ADF allows
+except RuntimeError as e:
+    # ADF blocked the output
+    print(f"Governance decision: {e}")
 ```
 
 ---
 
-## 📚 Additional Resources
+## Target Audience
 
-- **Dashboard**: `adf_dashboard.html` (double-click to open)
-- **Demo Scenarios**: `python -m adf.demo.investor_demo`
-- **API Documentation**: http://127.0.0.1:8000/docs (when server is running)
+AI Decision Firewall is designed for:
 
----
+**Enterprises**
+Organizations deploying AI systems that require governance, auditability, and risk management before AI outputs execute real-world actions.
 
-## ⚖️ Compliance & Governance
+**Regulated Industries**
+Financial services, healthcare, legal, and other industries with compliance requirements that mandate human oversight and immutable audit trails.
 
-ADF is designed for enterprises that need:
-
-- **Regulatory Compliance**: Audit trails, mandatory review workflows
-- **Risk Management**: Governance before execution, not after
-- **Explainability**: Plain English reasons for every decision
-- **Determinism**: Same input → same output (auditable)
-- **Non-Bypassable Rules**: Governance rules that cannot be overridden
+**AI Product Teams**
+Engineering teams building AI-powered products that need runtime enforcement of safety rules, evidence requirements, and policy compliance.
 
 ---
 
-## 📝 License
+## Enterprise Features
 
-[Your License Here]
+**Audit Logging**
+Immutable JSONL audit logs capture all governance decisions with timestamps, verdicts, risk scores, and explanations. Enterprise mode enables tamper-resistant logging suitable for compliance requirements.
+
+**Metrics and Analytics**
+Track governance decisions, block rates, evidence requirements, and human review escalations. Monitor system performance and policy effectiveness over time.
+
+**Self-Learning**
+ADF tracks false positives and false negatives from human overrides, enabling adaptive threshold tuning without code changes.
+
+**Policy Modes**
+Industry-specific governance profiles with non-bypassable rules for financial services, healthcare, legal, and general AI use cases.
 
 ---
 
-## 🤝 Support
+## Configuration
 
-For questions, issues, or contributions, please [contact information].
+ADF configuration is managed through environment variables and the `adf/config.py` file:
+
+**Environment Variables:**
+- `ADF_ENTERPRISE_MODE`: Enable enterprise features (audit logging, enhanced metrics)
+- `ADF_AUDIT_LOG_DIR`: Directory for audit log storage
+- `ADF_MEMORY_DIR`: Directory for learning memory storage
+- `ADF_METRICS_DIR`: Directory for metrics storage
+
+**Configuration File:**
+Edit `adf/config.py` to adjust confidence thresholds, risk thresholds, action impact levels, and learning parameters.
 
 ---
 
-**Remember**: ADF governs AI outputs—it does not generate them. ADF ensures that AI systems operate within governance boundaries before they execute real-world actions.
+## Testing
+
+Run the test suite:
+
+```bash
+pytest test_example.py test_enterprise.py test_governance_rules.py -v
+```
+
+Key test coverage:
+- Governance rules enforcement (trade actions always require review)
+- Evidence requirements for high-confidence claims
+- Risk-based escalation
+- Policy mode configurations
+- Audit logging in enterprise mode
+
+---
+
+## License
+
+[Specify your license here]
+
+---
+
+## Support and Contributing
+
+For questions, issues, or contributions, please [provide contact information or contribution guidelines].
+
+---
+
+**AI must be governed, not just optimized. ADF provides the runtime enforcement layer that enterprises need to deploy AI systems safely, accountably, and in compliance with regulatory requirements.**

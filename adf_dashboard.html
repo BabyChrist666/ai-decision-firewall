@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Decision Firewall</title>
+    
+    <!-- 
+    HOW TO RUN:
+    1) Start backend: uvicorn adf.main:app --reload
+    2) Double-click this HTML file to open in browser
+    -->
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+        }
+        
+        body {
+            background: #0a0a0f;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+        
+        .panel {
+            background: rgba(20, 20, 35, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 
+                0 8px 32px 0 rgba(0, 0, 0, 0.37),
+                0 0 20px rgba(0, 255, 255, 0.2);
+        }
+        
+        .input-field {
+            background: #0a0a0f;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #00ffff;
+            transition: all 0.2s;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        }
+        
+        .input-field::placeholder {
+            color: #666;
+        }
+        
+        .btn-intercept {
+            background: #00ffff;
+            color: #0a0a0f;
+            border: 2px solid #00ffff;
+            padding: 0.75rem 2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .btn-intercept:hover:not(:disabled) {
+            background: rgba(0, 255, 255, 0.9);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
+        }
+        
+        .btn-intercept:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .verdict-badge {
+            padding: 1.5rem 2rem;
+            border: 2px solid;
+            font-weight: 700;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            text-align: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .verdict-allow {
+            background: rgba(0, 255, 65, 0.15);
+            border-color: #00ff41;
+            color: #00ff41;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.5);
+        }
+        
+        .verdict-evidence {
+            background: rgba(255, 255, 0, 0.15);
+            border-color: #ffff00;
+            color: #ffff00;
+            box-shadow: 0 0 30px rgba(255, 255, 0, 0.5);
+        }
+        
+        .verdict-review {
+            background: rgba(255, 0, 64, 0.15);
+            border-color: #ff0040;
+            color: #ff0040;
+            box-shadow: 0 0 30px rgba(255, 0, 64, 0.5);
+        }
+        
+        .log-line {
+            font-size: 0.75rem;
+            color: rgba(0, 255, 255, 0.8);
+            margin-bottom: 0.5rem;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+        
+        .flicker {
+            animation: flicker 2s infinite;
+        }
+        
+        @keyframes flicker {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+        
+        .risk-bar {
+            background: #0a0a0f;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            height: 1.5rem;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .risk-fill {
+            height: 100%;
+            transition: width 0.6s ease;
+            position: relative;
+        }
+        
+        .risk-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+        
+        .risk-low {
+            background: #00ff41;
+        }
+        
+        .risk-medium {
+            background: #ffff00;
+        }
+        
+        .risk-high {
+            background: #ff0040;
+        }
+        
+        .scroll-area {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 255, 255, 0.3) transparent;
+        }
+        
+        .scroll-area::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .scroll-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .scroll-area::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        .scroll-area::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="text-cyan-400 min-h-screen p-6">
+    <div class="max-w-7xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="text-center py-8 border-b border-cyan-500/30">
+            <h1 class="text-5xl font-bold uppercase tracking-wider mb-2 text-cyan-400">
+                AI DECISION FIREWALL
+            </h1>
+            <p class="text-lg text-gray-400 mt-2">
+                Runtime Governance for Artificial Intelligence
+            </p>
+            <div class="mt-3 text-sm text-cyan-500/80 bg-cyan-500/10 border border-cyan-500/30 px-4 py-2 inline-block">
+                ⚠️ ADF governs AI outputs — it does NOT generate them
+            </div>
+            <div class="mt-4">
+                <span class="text-sm text-gray-400 flicker" id="status-text">
+                    Monitoring AI systems in real time…
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left Panel: Input -->
+            <div class="panel p-6 space-y-5">
+                <h2 class="text-2xl font-bold uppercase tracking-wider text-cyan-400 border-b border-cyan-500/30 pb-3">
+                    GOVERNANCE INPUT
+                </h2>
+                
+                <!-- Demo Presets -->
+                <div class="bg-gray-900/50 border border-cyan-500/20 p-3 rounded">
+                    <div class="text-xs uppercase tracking-wider text-gray-400 mb-2">Demo Scenarios</div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="loadPreset('hallucinated')" class="px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs uppercase hover:bg-cyan-500/30 transition">
+                            Hallucinated Fact
+                        </button>
+                        <button type="button" onclick="loadPreset('trade')" class="px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs uppercase hover:bg-cyan-500/30 transition">
+                            High-Risk Trade
+                        </button>
+                        <button type="button" onclick="loadPreset('grounded')" class="px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs uppercase hover:bg-cyan-500/30 transition">
+                            Grounded Answer
+                        </button>
+                    </div>
+                </div>
+                
+                <form id="firewall-form" onsubmit="handleIntercept(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm uppercase tracking-wider text-gray-400 mb-2">
+                            Simulated AI Output
+                        </label>
+                        <textarea
+                            id="ai-output"
+                            class="input-field w-full h-40 p-4 resize-none"
+                            placeholder="Enter simulated AI-generated output for governance evaluation..."
+                            required
+                        ></textarea>
+                        <div class="text-xs text-gray-500 mt-1">
+                            This simulates an AI model's output. ADF evaluates it for safety and compliance.
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm uppercase tracking-wider text-gray-400 mb-2">
+                            Confidence: <span id="confidence-value">0.5</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="confidence"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value="0.5"
+                            class="input-field w-full p-3"
+                            oninput="updateConfidenceDisplay(this.value)"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm uppercase tracking-wider text-gray-400 mb-2">
+                            Intended Action
+                        </label>
+                        <select
+                            id="intended-action"
+                            class="input-field w-full p-3"
+                            required
+                        >
+                            <option value="answer">answer</option>
+                            <option value="trade">trade</option>
+                            <option value="execute_code">execute_code</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm uppercase tracking-wider text-gray-400 mb-2">
+                            Sources (comma separated)
+                        </label>
+                        <input
+                            type="text"
+                            id="sources"
+                            class="input-field w-full p-3"
+                            placeholder="https://example.com, https://example.org"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="submit-btn"
+                        class="btn-intercept w-full"
+                    >
+                        EVALUATE GOVERNANCE
+                    </button>
+                    <div class="text-xs text-center text-gray-500 mt-2">
+                        ADF determines if this output may proceed based on governance rules
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Panel: Output -->
+            <div class="space-y-6">
+                <!-- Verdict Display -->
+                <div id="verdict-container" class="hidden">
+                    <div class="panel p-6 space-y-4">
+                        <h2 class="text-2xl font-bold uppercase tracking-wider text-cyan-400 border-b border-cyan-500/30 pb-3">
+                            GOVERNANCE VERDICT
+                        </h2>
+                        <div id="verdict-badge" class="verdict-badge"></div>
+                        <div id="applied-policies" class="text-xs text-gray-400 mt-2 hidden">
+                            <div class="uppercase tracking-wider mb-1">Applied Policies:</div>
+                            <div id="policies-list" class="flex flex-wrap gap-1"></div>
+                        </div>
+                        <div id="escalation-reason-container" class="text-xs text-cyan-400 mt-2 hidden">
+                            <div class="uppercase tracking-wider mb-1">Escalation Reason:</div>
+                            <div id="escalation-reason" class="font-mono"></div>
+                        </div>
+                        
+                        <div class="space-y-4 pt-4">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm uppercase tracking-wider text-gray-400">Risk Score</span>
+                                    <span class="text-xl font-bold text-cyan-400" id="risk-score-text">0%</span>
+                                </div>
+                                <div class="risk-bar">
+                                    <div class="risk-fill" id="risk-fill" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 class="text-sm uppercase tracking-wider text-gray-400 mb-2">Explanation</h3>
+                                <p class="text-gray-300 leading-relaxed" id="explanation"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Stream -->
+                <div class="panel p-4 h-96 scroll-area overflow-y-auto">
+                    <h2 class="text-sm uppercase tracking-wider text-cyan-400 font-bold mb-3 border-b border-cyan-500/30 pb-2">
+                        SYSTEM LOG
+                    </h2>
+                    <div class="space-y-1 font-mono text-xs" id="log-stream">
+                        <!-- Logs will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="error-container" class="panel p-6 border-2 border-red-500 hidden" style="box-shadow: 0 0 25px rgba(255, 0, 64, 0.5);">
+            <div class="flex items-center space-x-3 mb-2">
+                <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                <h3 class="text-lg font-bold uppercase tracking-wider text-red-500">Error</h3>
+            </div>
+            <p class="text-gray-300" id="error-message"></p>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center py-4 border-t border-cyan-500/30 text-xs text-gray-500">
+            <p>AI Decision Firewall v1.0.0</p>
+        </footer>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/firewall/check';
+        
+        // Log stream management
+        function addLog(message) {
+            const logStream = document.getElementById('log-stream');
+            const timestamp = new Date().toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+            
+            const logLine = document.createElement('div');
+            logLine.className = 'log-line';
+            logLine.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> <span>${message}</span>`;
+            
+            logStream.appendChild(logLine);
+            logStream.scrollTop = logStream.scrollHeight;
+            
+            // Keep only last 50 logs
+            while (logStream.children.length > 50) {
+                logStream.removeChild(logStream.firstChild);
+            }
+        }
+        
+        // Initialize log stream
+        function initLogStream() {
+            addLog('SYSTEM INITIALIZED');
+            addLog('FIREWALL ACTIVE');
+            addLog('AWAITING INPUT...');
+            
+            // Add periodic status logs
+            setInterval(() => {
+                const messages = [
+                    'MONITORING AI SYSTEMS...',
+                    'POLICY ENFORCEMENT READY',
+                    'AWAITING INTERCEPTION...'
+                ];
+                const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                addLog(randomMessage);
+            }, 5000);
+        }
+        
+        // Update confidence display
+        function updateConfidenceDisplay(value) {
+            document.getElementById('confidence-value').textContent = parseFloat(value).toFixed(2);
+        }
+        
+        // Demo presets
+        const presets = {
+            hallucinated: {
+                ai_output: "Apple was founded in 1976 and makes the iPhone. The company's market cap exceeds $3 trillion as of 2024.",
+                confidence: 0.92,
+                intended_action: "answer",
+                sources: ""
+            },
+            trade: {
+                ai_output: "Execute trade: BUY 10000 shares of AAPL based on technical analysis. The stock price has been volatile recently.",
+                confidence: 0.95,
+                intended_action: "trade",
+                sources: "https://finance.yahoo.com/quote/AAPL"
+            },
+            grounded: {
+                ai_output: "Based on the provided sources, Apple Inc. was founded in April 1976 by Steve Jobs, Steve Wozniak, and Ronald Wayne.",
+                confidence: 0.85,
+                intended_action: "answer",
+                sources: "https://www.apple.com/about/, https://en.wikipedia.org/wiki/Apple_Inc."
+            }
+        };
+        
+        function loadPreset(presetName) {
+            const preset = presets[presetName];
+            if (!preset) return;
+            
+            document.getElementById('ai-output').value = preset.ai_output;
+            document.getElementById('confidence').value = preset.confidence;
+            updateConfidenceDisplay(preset.confidence);
+            document.getElementById('intended-action').value = preset.intended_action;
+            document.getElementById('sources').value = preset.sources;
+            
+            addLog(`DEMO PRESET LOADED: ${presetName.toUpperCase()}`);
+        }
+        
+        // Handle form submission
+        async function handleIntercept(event) {
+            event.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const verdictContainer = document.getElementById('verdict-container');
+            const errorContainer = document.getElementById('error-container');
+            
+            // Reset UI
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'PROCESSING...';
+            verdictContainer.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+            
+            addLog('OUTPUT INTERCEPTED');
+            
+            // Get form values
+            const aiOutput = document.getElementById('ai-output').value;
+            const confidence = parseFloat(document.getElementById('confidence').value);
+            const intendedAction = document.getElementById('intended-action').value;
+            const sourcesText = document.getElementById('sources').value;
+            const sources = sourcesText
+                .split(',')
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+            
+            // Prepare request
+            const request = {
+                ai_output: aiOutput,
+                confidence: confidence,
+                intended_action: intendedAction,
+                sources: sources
+            };
+            
+            try {
+                addLog('ANALYZING CLAIMS...');
+                
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(request)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                addLog('RISK SCORE COMPUTED');
+                addLog(`VERDICT: ${data.verdict}`);
+                addLog('POLICY ENFORCED');
+                
+                displayVerdict(data);
+                
+            } catch (error) {
+                console.error('Firewall check error:', error);
+                addLog(`ERROR: ${error.message}`);
+                showError(error.message || 'Failed to connect to backend. Ensure the server is running on http://127.0.0.1:8000');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'EVALUATE GOVERNANCE';
+            }
+        }
+        
+        // Display verdict
+        function displayVerdict(data) {
+            const verdictContainer = document.getElementById('verdict-container');
+            const verdictBadge = document.getElementById('verdict-badge');
+            
+            // Set verdict badge
+            let badgeClass = 'verdict-badge ';
+            let verdictText = data.verdict;
+            
+            if (data.verdict === 'ALLOW') {
+                badgeClass += 'verdict-allow';
+            } else if (data.verdict === 'REQUIRE_EVIDENCE') {
+                badgeClass += 'verdict-evidence';
+            } else if (data.verdict === 'REQUIRE_HUMAN_REVIEW') {
+                badgeClass += 'verdict-review';
+            } else {
+                // BLOCK or other
+                badgeClass += 'verdict-review';
+            }
+            
+            verdictBadge.className = badgeClass;
+            verdictBadge.textContent = verdictText;
+            
+            // Set risk score
+            const riskScore = Math.round(data.risk_score * 100);
+            document.getElementById('risk-score-text').textContent = riskScore + '%';
+            
+            const riskFill = document.getElementById('risk-fill');
+            riskFill.style.width = riskScore + '%';
+            
+            // Set risk color
+            let riskClass = 'risk-low';
+            let riskTextColor = 'text-green-400';
+            
+            if (data.risk_score >= 0.6) {
+                riskClass = 'risk-high';
+                riskTextColor = 'text-red-400';
+            } else if (data.risk_score >= 0.3) {
+                riskClass = 'risk-medium';
+                riskTextColor = 'text-yellow-400';
+            }
+            
+            riskFill.className = `risk-fill ${riskClass}`;
+            document.getElementById('risk-score-text').className = `text-xl font-bold ${riskTextColor}`;
+            
+            // Set explanation
+            document.getElementById('explanation').textContent = data.explanation || data.reason || 'No explanation provided';
+            
+            // Display applied policies
+            if (data.applied_policies && data.applied_policies.length > 0) {
+                const policiesContainer = document.getElementById('applied-policies');
+                const policiesList = document.getElementById('policies-list');
+                if (policiesContainer && policiesList) {
+                    policiesContainer.classList.remove('hidden');
+                    policiesList.innerHTML = '';
+                    data.applied_policies.forEach(policy => {
+                        const badge = document.createElement('span');
+                        badge.className = 'px-2 py-1 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 uppercase text-xs';
+                        badge.textContent = policy;
+                        policiesList.appendChild(badge);
+                    });
+                }
+            }
+            
+            // Display escalation reason
+            if (data.escalation_reason) {
+                const escalationContainer = document.getElementById('escalation-reason-container');
+                const escalationReason = document.getElementById('escalation-reason');
+                if (escalationContainer && escalationReason) {
+                    escalationContainer.classList.remove('hidden');
+                    escalationReason.textContent = data.escalation_reason;
+                }
+            }
+            
+            // Show verdict container
+            verdictContainer.classList.remove('hidden');
+        }
+        
+        // Show error
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            
+            errorMessage.textContent = message;
+            errorContainer.classList.remove('hidden');
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initLogStream();
+        });
+    </script>
+</body>
+</html>

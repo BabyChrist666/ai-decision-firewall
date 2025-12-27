@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+  }
+  
+  body {
+    @apply bg-bg-darker text-neon-cyan antialiased;
+    background-image: 
+      radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 40% 20%, rgba(0, 255, 65, 0.03) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 255, 0.3);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 255, 0.5);
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-panel border border-panel-border backdrop-blur-md;
+    box-shadow: 
+      0 8px 32px 0 rgba(0, 0, 0, 0.37),
+      inset 0 0 0 1px rgba(0, 255, 255, 0.1);
+  }
+  
+  .glow-border {
+    @apply border-panel-border;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+  }
+  
+  .input-field {
+    @apply bg-bg-dark border border-panel-border text-neon-cyan placeholder:text-gray-500;
+    @apply px-4 py-2 focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan;
+    @apply transition-all duration-200;
+  }
+  
+  .input-field:focus {
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+  }
+  
+  .cyber-button {
+    @apply px-6 py-3 font-bold text-bg-darker uppercase tracking-wider;
+    @apply border-2 transition-all duration-200;
+    @apply hover:shadow-glow-cyan active:scale-95;
+  }
+  
+  .cyber-button-primary {
+    @apply cyber-button bg-neon-cyan border-neon-cyan;
+  }
+  
+  .cyber-button-primary:hover {
+    @apply bg-neon-cyan/90 shadow-glow-cyan;
+  }
+  
+  .terminal-line {
+    @apply text-xs text-green-400/80 mb-1;
+    animation: fadeIn 0.3s ease-in;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease-in;
+  }
+  
+  .scanline {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .scanline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.5), transparent);
+    animation: scan 3s linear infinite;
+  }
+  
+  @keyframes scan {
+    0% {
+      top: 0;
+    }
+    100% {
+      top: 100%;
+    }
+  }
+}

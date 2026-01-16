@@ -12,6 +12,10 @@ venv/
 audit_logs/
 memory/
 
+# Baby AGI workspaces
+workspace/
+workspace_*/
+
 # OS
 .DS_Store
 Thumbs.db

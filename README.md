@@ -1,155 +1,297 @@
-# AI Decision Firewall (ADF)
-
-**Runtime Governance and Policy Enforcement for AI Systems**
-
-AI Decision Firewall is an enterprise-grade runtime enforcement layer that sits between AI systems and real-world actions. ADF intercepts AI-generated outputs before execution and evaluates them against governance rules, evidence requirements, risk thresholds, and compliance policies. It provides deterministic verdicts that determine whether AI outputs may proceed, require additional evidence, escalate to human review, or must be blocked.
-
----
-
-## Problem Statement
-
-AI systems in production face critical challenges that traditional monitoring and post-hoc analysis cannot address:
-
-**Hallucinations and Ungrounded Claims**
-AI models often express high confidence in factual claims without providing supporting evidence. These outputs propagate misinformation and erode trust when deployed in production systems.
-
-**Overconfident Predictions**
-AI systems may assign high confidence scores to speculative or uncertain outputs, creating false certainty that leads to poor decision-making.
-
-**High-Risk Autonomous Actions**
-AI systems executing financial trades, medical recommendations, legal advice, or code execution without human oversight present unacceptable risks to organizations and end users.
-
-**Lack of Auditability**
-Most AI systems operate as black boxes, providing no explanation for decisions and no immutable audit trail for compliance and regulatory requirements.
-
-ADF addresses these problems by enforcing governance rules at runtime, before AI outputs execute real-world actions.
-
----
-
-## What ADF Does
-
-ADF intercepts AI outputs and evaluates them across multiple dimensions:
-
-1. **Evidence Validation**: Requires supporting sources for high-confidence factual claims
-2. **Confidence Alignment**: Validates that confidence scores match the characteristics of claims
-3. **Risk Assessment**: Calculates risk scores based on confidence, action impact, and evidence presence
-4. **Policy Enforcement**: Applies governance rules that cannot be bypassed (e.g., all trades require human review)
-5. **Safety Rules**: Blocks unsafe patterns, contradictions, and harmful actions
-
-ADF returns deterministic verdicts:
-
-- **ALLOW**: Output may proceed; all checks passed and risk is acceptable
-- **REQUIRE_EVIDENCE**: Evidence must be provided before proceeding
-- **REQUIRE_HUMAN_REVIEW**: Human approval required before proceeding (mandatory for certain actions)
-- **BLOCK**: Output violates safety rules and cannot proceed
-
----
-
-## Architecture Overview
+<div align="center">
 
 ```
-┌─────────────────┐
-│   AI System     │
-│  (LLM/Model)    │
-└────────┬────────┘
-         │
-         │ AI Output + Metadata
-         │ (confidence, action, sources)
-         │
-         ▼
-┌─────────────────────────────────────┐
-│      AI Decision Firewall (ADF)     │
-│                                      │
-│  ┌──────────────────────────────┐  │
-│  │  Policy Manager              │  │
-│  │  (Governance Rules)          │  │
-│  └────────────┬─────────────────┘  │
-│               │                     │
-│  ┌────────────▼─────────────────┐  │
-│  │  Firewall Interceptor        │  │
-│  │  - Claim Parser              │  │
-│  │  - Evidence Checker          │  │
-│  │  - Confidence Validator      │  │
-│  │  - Risk Scorer               │  │
-│  │  - Rules Engine              │  │
-│  │  - Verdict Engine            │  │
-│  └────────────┬─────────────────┘  │
-│               │                     │
-│  ┌────────────▼─────────────────┐  │
-│  │  Audit & Metrics             │  │
-│  │  - Immutable Logs            │  │
-│  │  - Decision Tracking         │  │
-│  └──────────────────────────────┘  │
-└────────────┬────────────────────────┘
-             │
-             │ Verdict + Explanation
-             │
-         ┌───┴────┐
-         │        │
-    ┌────▼───┐ ┌─▼────────┐
-    │ ALLOW  │ │ ESCALATE │
-    │        │ │ / BLOCK  │
-    └────────┘ └──────────┘
-         │            │
-         ▼            ▼
-    ┌────────────────────┐
-    │  Real-World Action │
-    │  (if allowed)      │
-    └────────────────────┘
+ █████╗ ██████╗ ██╗   ██╗███████╗███████╗ █████╗ ██╗          ██████╗██╗██████╗  ██████╗██╗   ██╗██╗████████╗
+██╔══██╗██╔══██╗╚██╗ ██╔╝██╔════╝██╔════╝██╔══██╗██║         ██╔════╝██║██╔══██╗██╔════╝██║   ██║██║╚══██╔══╝
+███████║██████╔╝ ╚████╔╝ ███████╗███████╗███████║██║         ██║     ██║██████╔╝██║     ██║   ██║██║   ██║
+██╔══██║██╔══██╗  ╚██╔╝  ╚════██║╚════██║██╔══██║██║         ██║     ██║██╔══██╗██║     ██║   ██║██║   ██║
+██║  ██║██████╔╝   ██║   ███████║███████║██║  ██║███████╗    ╚██████╗██║██║  ██║╚██████╗╚██████╔╝██║   ██║
+╚═╝  ╚═╝╚═════╝    ╚═╝   ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝     ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝   ╚═╝
+```
+
+# ◎ AI DECISION FIREWALL ◎
+
+<img src="https://img.shields.io/badge/GOVERNANCE-RUNTIME-00ffff?style=for-the-badge&labelColor=001a1a" />
+<img src="https://img.shields.io/badge/ENFORCEMENT-ACTIVE-00cccc?style=for-the-badge&labelColor=001a1a" />
+<img src="https://img.shields.io/badge/MODE-ENTERPRISE-008888?style=for-the-badge&labelColor=001a1a" />
+<img src="https://img.shields.io/badge/STATUS-INTERCEPTING-00aaaa?style=for-the-badge&labelColor=001a1a" />
+
+<br/>
+
+**`[ RUNTIME GOVERNANCE // POLICY ENFORCEMENT // AI SAFETY ]`**
+
+*From the abyss, we guard the gates.*
+
+```
+    ╔═══════════════════════════════════════════════════════════════════════════╗
+    ║                                                                           ║
+    ║   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   ║
+    ║   ░░                                                                ░░   ║
+    ║   ░░   AN ENTERPRISE-GRADE RUNTIME ENFORCEMENT LAYER THAT SITS      ░░   ║
+    ║   ░░   BETWEEN AI SYSTEMS AND REAL-WORLD ACTIONS                    ░░   ║
+    ║   ░░                                                                ░░   ║
+    ║   ░░   INTERCEPT → EVALUATE → VERDICT → EXECUTE                     ░░   ║
+    ║   ░░                                                                ░░   ║
+    ║   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   ║
+    ║                                                                           ║
+    ╚═══════════════════════════════════════════════════════════════════════════╝
+```
+
+</div>
+
+---
+
+## ◎ THE PROBLEM
+
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                               ┃
+┃   AI systems in production face critical challenges that traditional          ┃
+┃   monitoring and post-hoc analysis cannot address:                            ┃
+┃                                                                               ┃
+┃   ▸ HALLUCINATIONS         Models express high confidence without evidence    ┃
+┃   ▸ OVERCONFIDENCE         High scores assigned to speculative outputs        ┃
+┃   ▸ HIGH-RISK ACTIONS      Autonomous execution without human oversight       ┃
+┃   ▸ LACK OF AUDITABILITY   No explanation or immutable trail                  ┃
+┃                                                                               ┃
+┃   ADF enforces governance at runtime, BEFORE AI outputs become actions.       ┃
+┃                                                                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
 ---
 
-## Governance and Policy Modes
+## ◎ ENFORCEMENT DIMENSIONS
 
-ADF enforces governance rules that cannot be bypassed by confidence scores, evidence presence, or risk calculations. These rules define mandatory human review requirements for specific action types.
+<table>
+<tr>
+<td width="50%">
 
-**GENERAL_AI Mode**
-Default policy mode with conservative defaults. Requires human review for financial trades and code execution actions.
+### ◎ VALIDATION LAYER
 
-**FINANCIAL_SERVICES Mode**
-All financial trades require mandatory human review. This requirement cannot be overridden regardless of confidence, evidence, or risk score. Stricter evidence thresholds and lower risk tolerance.
+```
+┌────────────────────────────────┐
+│  ▸ Evidence Validation         │
+│    Require sources for claims  │
+│                                │
+│  ▸ Confidence Alignment        │
+│    Validate score accuracy     │
+│                                │
+│  ▸ Risk Assessment             │
+│    Calculate impact scores     │
+└────────────────────────────────┘
+```
 
-**HEALTHCARE Mode**
-Medical actions require mandatory human review. Highest evidence requirements and strictest risk enforcement for healthcare applications.
+</td>
+<td width="50%">
 
-**LEGAL Mode**
-Legal actions require mandatory human review. Highest evidence requirements and strictest risk enforcement for legal applications.
+### ◎ ENFORCEMENT LAYER
 
-Policy modes are set via API and apply to all firewall evaluations:
+```
+┌────────────────────────────────┐
+│  ▸ Policy Enforcement          │
+│    Non-bypassable rules        │
+│                                │
+│  ▸ Safety Rules                │
+│    Block harmful patterns      │
+│                                │
+│  ▸ Audit Logging               │
+│    Immutable decision trail    │
+└────────────────────────────────┘
+```
 
-```python
-POST /policy/mode
-{
-  "mode": "FINANCIAL_SERVICES"
-}
+</td>
+</tr>
+</table>
+
+---
+
+## ◎ VERDICT ENGINE
+
+```
+                    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+                    ┃               AI OUTPUT RECEIVED               ┃
+                    ┗━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                                          │
+                                          ▼
+                    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+                    ┃          ◎ ADF EVALUATION ENGINE ◎            ┃
+                    ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+                    ┃  ▸ Claim Parser                               ┃
+                    ┃  ▸ Evidence Checker                           ┃
+                    ┃  ▸ Confidence Validator                       ┃
+                    ┃  ▸ Risk Scorer                                ┃
+                    ┃  ▸ Rules Engine                               ┃
+                    ┃  ▸ Verdict Engine                             ┃
+                    ┗━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                                          │
+                    ┌─────────────────────┼─────────────────────┐
+                    │                     │                     │
+                    ▼                     ▼                     ▼
+    ┏━━━━━━━━━━━━━━━━━━━━┓  ┏━━━━━━━━━━━━━━━━━━━━┓  ┏━━━━━━━━━━━━━━━━━━━━┓
+    ┃      ◎ ALLOW       ┃  ┃    ◎ ESCALATE      ┃  ┃      ◎ BLOCK       ┃
+    ┃                    ┃  ┃                    ┃  ┃                    ┃
+    ┃  All checks pass   ┃  ┃  Human review      ┃  ┃  Safety violation  ┃
+    ┃  Risk acceptable   ┃  ┃  Evidence needed   ┃  ┃  Cannot proceed    ┃
+    ┗━━━━━━━━━━━━━━━━━━━━┛  ┗━━━━━━━━━━━━━━━━━━━━┛  ┗━━━━━━━━━━━━━━━━━━━━┛
 ```
 
 ---
 
-## Quick Start
+## ◎ VERDICT TYPES
 
-### Prerequisites
+| VERDICT | MEANING | ACTION |
+|:--------|:--------|:-------|
+| **`ALLOW`** | All checks passed, risk acceptable | Output may proceed |
+| **`REQUIRE_EVIDENCE`** | Missing supporting sources | Must provide evidence before proceeding |
+| **`REQUIRE_HUMAN_REVIEW`** | Policy mandates oversight | Human approval required |
+| **`BLOCK`** | Safety rules violated | Output cannot proceed |
 
-- Python 3.8 or higher
-- pip package manager
+---
 
-### Installation
+## ◎ POLICY MODES
+
+<table>
+<tr>
+<td width="50%">
+
+### GENERAL_AI
+
+```
+╔══════════════════════════════════╗
+║  Default conservative policy     ║
+║                                  ║
+║  ▸ Human review: trades, code    ║
+║  ▸ Standard evidence thresholds  ║
+║  ▸ Balanced risk tolerance       ║
+╚══════════════════════════════════╝
+```
+
+### FINANCIAL_SERVICES
+
+```
+╔══════════════════════════════════╗
+║  All trades require review       ║
+║                                  ║
+║  ▸ MANDATORY human review        ║
+║  ▸ Strict evidence requirements  ║
+║  ▸ Low risk tolerance            ║
+╚══════════════════════════════════╝
+```
+
+</td>
+<td width="50%">
+
+### HEALTHCARE
+
+```
+╔══════════════════════════════════╗
+║  Medical actions require review  ║
+║                                  ║
+║  ▸ MANDATORY human review        ║
+║  ▸ Highest evidence thresholds   ║
+║  ▸ Strictest risk enforcement    ║
+╚══════════════════════════════════╝
+```
+
+### LEGAL
+
+```
+╔══════════════════════════════════╗
+║  Legal actions require review    ║
+║                                  ║
+║  ▸ MANDATORY human review        ║
+║  ▸ Highest evidence thresholds   ║
+║  ▸ Strictest risk enforcement    ║
+╚══════════════════════════════════╝
+```
+
+</td>
+</tr>
+</table>
+
+---
+
+## ◎ SYSTEM ARCHITECTURE
+
+```
+┌─────────────────────┐
+│     AI SYSTEM       │
+│    (LLM/Model)      │
+└──────────┬──────────┘
+           │
+           │ AI Output + Metadata
+           │ (confidence, action, sources)
+           │
+           ▼
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                  ◎ AI DECISION FIREWALL ◎                        ┃
+┃                                                                  ┃
+┃   ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓   ┃
+┃   ┃                   Policy Manager                        ┃   ┃
+┃   ┃                 (Governance Rules)                      ┃   ┃
+┃   ┗━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛   ┃
+┃                          │                                       ┃
+┃   ┏━━━━━━━━━━━━━━━━━━━━━━▼━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓   ┃
+┃   ┃              Firewall Interceptor                       ┃   ┃
+┃   ┃   ▸ Claim Parser        ▸ Evidence Checker              ┃   ┃
+┃   ┃   ▸ Confidence Valid    ▸ Risk Scorer                   ┃   ┃
+┃   ┃   ▸ Rules Engine        ▸ Verdict Engine                ┃   ┃
+┃   ┗━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛   ┃
+┃                          │                                       ┃
+┃   ┏━━━━━━━━━━━━━━━━━━━━━━▼━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓   ┃
+┃   ┃               Audit & Metrics                           ┃   ┃
+┃   ┃   ▸ Immutable Logs      ▸ Decision Tracking             ┃   ┃
+┃   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛   ┃
+┃                                                                  ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                           │
+                           │ Verdict + Explanation
+                           │
+           ┌───────────────┴───────────────┐
+           │                               │
+           ▼                               ▼
+    ┌─────────────┐                 ┌─────────────┐
+    │   ALLOW     │                 │   BLOCK /   │
+    │             │                 │   ESCALATE  │
+    └──────┬──────┘                 └─────────────┘
+           │
+           ▼
+    ┌─────────────────┐
+    │  REAL-WORLD     │
+    │    ACTION       │
+    └─────────────────┘
+```
+
+---
+
+## ◎ QUICK START
+
+### PREREQUISITES
+
+```
+╔════════════════════════════════════════════════════════════╗
+║  ▸ Python 3.8+                                             ║
+║  ▸ pip package manager                                     ║
+╚════════════════════════════════════════════════════════════╝
+```
+
+### INSTALLATION
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/BabyChrist666/ai-decision-firewall.git
 cd ai-decision-firewall
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-### Start the API Server
+### EXECUTE
 
 ```bash
 # Run with uvicorn
@@ -159,44 +301,59 @@ uvicorn adf.main:app --reload --host 0.0.0.0 --port 8000
 python -m adf.main
 ```
 
-### Verify Installation
+### VERIFY
 
-Access the API documentation at:
-- Interactive API docs: http://localhost:8000/docs
-- Alternative docs: http://localhost:8000/redoc
-
-Test the health endpoint:
 ```bash
+# Health check
 curl http://localhost:8000/health
+
+# API Documentation
+# → http://localhost:8000/docs
+# → http://localhost:8000/redoc
 ```
 
 ---
 
-## Key API Endpoints
+## ◎ API ENDPOINTS
 
-### POST /firewall/check
+### Core Endpoints
 
-Main endpoint for evaluating AI outputs. Returns a verdict with explanation.
+| ENDPOINT | METHOD | DESCRIPTION |
+|:---------|:------:|:------------|
+| `/firewall/check` | POST | Evaluate AI output, return verdict |
+| `/policy/mode` | POST | Set governance policy mode |
+| `/policy/mode` | GET | Get current policy configuration |
+| `/audit/logs` | GET | Query audit logs (enterprise) |
+| `/metrics` | GET | Get firewall statistics |
+| `/demo/run` | POST | Execute demo scenarios |
 
-**Request:**
-```json
-{
-  "ai_output": "Apple was founded in 1976",
-  "confidence": 0.92,
-  "intended_action": "answer",
-  "sources": []
-}
+---
+
+## ◎ USAGE EXAMPLE
+
+### Firewall Check Request
+
+```bash
+curl -X POST http://localhost:8000/firewall/check \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ai_output": "Execute trade: BUY 1000 shares of AAPL",
+    "confidence": 0.92,
+    "intended_action": "trade",
+    "sources": []
+  }'
 ```
 
-**Response:**
+### Response
+
 ```json
 {
   "verdict": "REQUIRE_HUMAN_REVIEW",
   "reason": "Governance rule: trade actions require mandatory human review",
   "risk_score": 0.75,
-  "explanation": "This trade action requires mandatory human review due to governance policy...",
+  "explanation": "This trade action requires mandatory human review...",
   "applied_policies": ["mandatory_governance_review"],
-  "escalation_reason": "Governance rule: trade actions require mandatory human review in FINANCIAL_SERVICES policy mode",
+  "escalation_reason": "Governance rule: trade actions require mandatory human review",
   "confidence_alignment": false,
   "failed_checks": ["governance_mandatory_review"],
   "details": {
@@ -207,73 +364,17 @@ Main endpoint for evaluating AI outputs. Returns a verdict with explanation.
 }
 ```
 
-### POST /policy/mode
+### Set Policy Mode
 
-Set the governance policy mode for all firewall evaluations.
-
-**Request:**
-```json
-{
-  "mode": "FINANCIAL_SERVICES"
-}
+```bash
+curl -X POST http://localhost:8000/policy/mode \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "FINANCIAL_SERVICES"}'
 ```
-
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "Policy mode set to FINANCIAL_SERVICES",
-  "policy": {
-    "mode": "FINANCIAL_SERVICES",
-    "mandatory_review_actions": ["trade", "execute_code"],
-    "confidence_threshold_evidence_required": 0.7,
-    "risk_threshold_medium": 0.5,
-    "description": "Financial services compliance - all trades require human review"
-  }
-}
-```
-
-### GET /policy/mode
-
-Get the current policy mode configuration.
-
-### GET /audit/logs
-
-Query audit logs for compliance and analysis. Requires enterprise mode.
-
-**Query Parameters:**
-- `limit`: Maximum number of records (1-1000, default: 100)
-- `verdict`: Filter by verdict type
-- `action`: Filter by intended action
-
-### GET /metrics
-
-Get firewall statistics including request counts, block rates, and verdict distributions.
-
-### POST /demo/run
-
-Execute predefined demo scenarios for testing and demonstration.
 
 ---
 
-## Dashboard (Demo and Visualization)
-
-The repository includes `adf_dashboard.html`, a self-contained HTML dashboard that visualizes ADF's governance decisions. This dashboard is intended for:
-
-- Demonstration and visualization of ADF capabilities
-- Testing and experimentation
-- Understanding verdict explanations and risk scores
-
-The dashboard is not required for production use. Production deployments should integrate ADF via the API or Python SDK.
-
-To use the dashboard:
-1. Start the ADF API server (see Quick Start)
-2. Open `adf_dashboard.html` in a web browser
-3. Submit simulated AI outputs to see governance verdicts
-
----
-
-## Python SDK Usage
+## ◎ SDK USAGE
 
 ### Basic Usage
 
@@ -290,13 +391,10 @@ response = client.check(
 )
 
 if response.verdict == "ALLOW":
-    # Proceed with action
     execute_trade(response.ai_output)
 elif response.verdict == "REQUIRE_HUMAN_REVIEW":
-    # Escalate to human
     escalate_for_review(response)
 else:
-    # Block or require evidence
     handle_blocked_output(response)
 ```
 
@@ -307,96 +405,126 @@ from adf.sdk import firewalled
 
 @firewalled(intended_action="trade", raise_on_block=True)
 def execute_trading_strategy():
-    # Your AI model generates output
     ai_output = llm.generate("Should I buy AAPL?")
     confidence = 0.85
     sources = ["https://financial-analysis.com/report"]
-    
+
     return ai_output, confidence, sources
 
 try:
     result = execute_trading_strategy()
-    # Only executes if ADF allows
 except RuntimeError as e:
-    # ADF blocked the output
     print(f"Governance decision: {e}")
 ```
 
 ---
 
-## Target Audience
+## ◎ ENTERPRISE FEATURES
 
-AI Decision Firewall is designed for:
-
-**Enterprises**
-Organizations deploying AI systems that require governance, auditability, and risk management before AI outputs execute real-world actions.
-
-**Regulated Industries**
-Financial services, healthcare, legal, and other industries with compliance requirements that mandate human oversight and immutable audit trails.
-
-**AI Product Teams**
-Engineering teams building AI-powered products that need runtime enforcement of safety rules, evidence requirements, and policy compliance.
+| FEATURE | DESCRIPTION |
+|:--------|:------------|
+| **Audit Logging** | Immutable JSONL logs for compliance |
+| **Metrics & Analytics** | Track decisions, block rates, escalations |
+| **Self-Learning** | Adaptive threshold tuning from overrides |
+| **Policy Modes** | Industry-specific governance profiles |
 
 ---
 
-## Enterprise Features
+## ◎ CONFIGURATION
 
-**Audit Logging**
-Immutable JSONL audit logs capture all governance decisions with timestamps, verdicts, risk scores, and explanations. Enterprise mode enables tamper-resistant logging suitable for compliance requirements.
+### Environment Variables
 
-**Metrics and Analytics**
-Track governance decisions, block rates, evidence requirements, and human review escalations. Monitor system performance and policy effectiveness over time.
-
-**Self-Learning**
-ADF tracks false positives and false negatives from human overrides, enabling adaptive threshold tuning without code changes.
-
-**Policy Modes**
-Industry-specific governance profiles with non-bypassable rules for financial services, healthcare, legal, and general AI use cases.
+| VARIABLE | DESCRIPTION |
+|:---------|:------------|
+| `ADF_ENTERPRISE_MODE` | Enable enterprise features |
+| `ADF_AUDIT_LOG_DIR` | Directory for audit logs |
+| `ADF_MEMORY_DIR` | Directory for learning memory |
+| `ADF_METRICS_DIR` | Directory for metrics storage |
 
 ---
 
-## Configuration
-
-ADF configuration is managed through environment variables and the `adf/config.py` file:
-
-**Environment Variables:**
-- `ADF_ENTERPRISE_MODE`: Enable enterprise features (audit logging, enhanced metrics)
-- `ADF_AUDIT_LOG_DIR`: Directory for audit log storage
-- `ADF_MEMORY_DIR`: Directory for learning memory storage
-- `ADF_METRICS_DIR`: Directory for metrics storage
-
-**Configuration File:**
-Edit `adf/config.py` to adjust confidence thresholds, risk thresholds, action impact levels, and learning parameters.
-
----
-
-## Testing
-
-Run the test suite:
+## ◎ TESTING
 
 ```bash
+# Run the test suite
 pytest test_example.py test_enterprise.py test_governance_rules.py -v
 ```
 
-Key test coverage:
-- Governance rules enforcement (trade actions always require review)
-- Evidence requirements for high-confidence claims
-- Risk-based escalation
-- Policy mode configurations
-- Audit logging in enterprise mode
+---
+
+## ◎ DIRECTORY STRUCTURE
+
+```
+ai-decision-firewall/
+├── adf/
+│   ├── main.py              # FastAPI application
+│   ├── firewall.py          # Core firewall logic
+│   ├── policy.py            # Policy management
+│   ├── evidence.py          # Evidence validation
+│   ├── risk.py              # Risk scoring
+│   ├── audit.py             # Audit logging
+│   ├── sdk.py               # Python SDK
+│   └── config.py            # Configuration
+├── tests/                   # Test suite
+├── adf_dashboard.html       # Demo dashboard
+├── requirements.txt
+└── README.md
+```
 
 ---
 
-## License
+## ◎ TARGET AUDIENCE
 
-[Specify your license here]
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                               ┃
+┃   ▸ ENTERPRISES                                                               ┃
+┃     Organizations deploying AI that require governance and risk management    ┃
+┃                                                                               ┃
+┃   ▸ REGULATED INDUSTRIES                                                      ┃
+┃     Finance, healthcare, legal with compliance requirements                   ┃
+┃                                                                               ┃
+┃   ▸ AI PRODUCT TEAMS                                                          ┃
+┃     Engineering teams building AI products needing runtime enforcement        ┃
+┃                                                                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
 
 ---
 
-## Support and Contributing
+## ◎ TECH STACK
 
-For questions, issues, or contributions, please [provide contact information or contribution guidelines].
+<table>
+<tr>
+<td align="center"><strong>FastAPI</strong><br/>Async Server</td>
+<td align="center"><strong>Python</strong><br/>3.8+ Runtime</td>
+<td align="center"><strong>Pydantic</strong><br/>Validation</td>
+<td align="center"><strong>JSONL</strong><br/>Audit Logs</td>
+</tr>
+</table>
 
 ---
 
-**AI must be governed, not just optimized. ADF provides the runtime enforcement layer that enterprises need to deploy AI systems safely, accountably, and in compliance with regulatory requirements.**
+<div align="center">
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                   ║
+║   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   ║
+║   ░░                                                                        ░░   ║
+║   ░░    AI MUST BE GOVERNED, NOT JUST OPTIMIZED                             ░░   ║
+║   ░░                                                                        ░░   ║
+║   ░░    ADF provides the runtime enforcement layer that enterprises         ░░   ║
+║   ░░    need to deploy AI systems safely, accountably, and in               ░░   ║
+║   ░░    compliance with regulatory requirements.                            ░░   ║
+║   ░░                                                                        ░░   ║
+║   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   ║
+║                                                                                   ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**MIT License**
+
+*From the abyss, we enforce the boundaries of artificial minds.*
+
+</div>

@@ -20,7 +20,7 @@
 
 **`[ RUNTIME GOVERNANCE // POLICY ENFORCEMENT // AI SAFETY ]`**
 
-*From the abyss, we guard the gates.*
+*Runtime governance for production AI systems.*
 
 ```
     ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -525,6 +525,6 @@ ai-decision-firewall/
 
 **MIT License**
 
-*From the abyss, we enforce the boundaries of artificial minds.*
+*Enforce governance at runtime, before AI outputs become actions.*
 
 </div>
